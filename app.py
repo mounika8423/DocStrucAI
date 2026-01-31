@@ -85,12 +85,29 @@ def pre_process(data):
 def extract():
     data=request.get_json()
     ans={}
-    for i in data["required_fields"]:
-        if i in data["document"].keys():
-            ans[i]=data["document"].get(i)
+    for j in data["required_fields"]:
+        if '.' not in j:
+            if j in data["document"].keys():
+                ans[j]=data["document"].get(j)
+            else:
+                ans[j]=None
         else:
-            ans[i]=None
-    return ans
+            #vendor.name.first
+            l=j.split('.')
+            curr=data["document"]
+            for i in range(len(l)-1):                 
+                if l[i] in curr.keys():
+                    curr=curr[l[i]] #data[doc][vendor][name]
+                else:
+                    ans[j]=None
+                    break
+            if l[len(l)-1] in curr.keys():
+                ans[j]=curr[l[len(l)-1]]
+            else:
+                ans[j]=None
+    return ans        
+
+
 
 if __name__=="__main__":
     app.run(debug=True)
