@@ -1,6 +1,7 @@
 from flask import Flask,request
 import re
 import datetime
+from dateutil import parser
 app=Flask(__name__)
 @app.route('/extract',methods=["POST"])
 def extract():
@@ -47,10 +48,11 @@ def pre_process(data):
         elif value=="YYYY-MM-DD":
             dateval=data["document"][key]
             try:
-                datetime.strptime(dateval,"%Y-%m-%d")
-            except:
-                ValueError
-                
+                final_date=parser.parse(str(dateval),fuzzy=False) #this converts string to datetime 
+                data["document"][key]=final_date.strftime("%Y-%m-%d") #this converts datetime to string in desired format
+            except(ValueError, TypeError):
+                data["document"][key]=None
+            
 
         
     return data
