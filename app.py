@@ -1,6 +1,5 @@
-from flask import Flask,request
+from flask import Flask, jsonify,request
 import re
-import datetime
 from dateutil import parser
 app=Flask(__name__)
 @app.route('/extract',methods=["POST"])
@@ -24,13 +23,15 @@ def extract():
     except Exception as e:
         return {"error": "Internal server error during validation."}, 500
     else:
-        return data,200
+        pre_processed=pre_process(data)
+        return pre_processed,200
     
+#@app.route('/preprocess',methods=["POST"])   
 def pre_process(data):
     for key,value in data["schema"].items():
         if value=="string":
             changed=data["document"][key].strip()
-            regexed=re.sub(r'\s+',' ',changed)
+            regexed=re.sub(r'\s+','',changed)
             data["document"][key]=regexed
         #Known limitations for number logic : no negatives, multiple dots invalid, float("")->crash
         elif value=="number":
@@ -45,14 +46,39 @@ def pre_process(data):
                         numbered=numbered.replace(i,"")
                 numbered=float(numbered)
                 data["document"][key]=numbered #3
+#Preprocessing isn't up to the mark (Strict date parsing has to be done using datetime) 
         elif value=="YYYY-MM-DD":
-            dateval=data["document"][key]
+            dateval=str(data["document"][key])
             try:
-                final_date=parser.parse(str(dateval),fuzzy=False) #this converts string to datetime 
-                data["document"][key]=final_date.strftime("%Y-%m-%d") #this converts datetime to string in desired format
-            except(ValueError, TypeError):
+                final_date=parser.parse(dateval, fuzzy=False)
+                data["document"][key]=final_date.strftime("%Y-%m-%d")
+            except:
                 data["document"][key]=None
-            
+        elif isinstance(value,dict):
+            for k,v in value.items():
+                if v=="string":
+                    changed=data["document"][key][k].strip()
+                    regexed=re.sub(r'\s+','',changed)
+                    data["document"][key][k]=regexed
+                elif v=="number":
+                    numbered=str(data["document"][key][k])#1
+                    if(numbered=="" or numbered=="N/A"):
+                        numbered=None 
+                        data["document"][key][k]=numbered #2
+                    else:
+                        wanted="0123456789."
+                        for i in numbered:
+                            if i not in wanted:
+                                numbered=numbered.replace(i,"")
+                        numbered=float(numbered)
+                        data["document"][key][k]=numbered #3
+                elif v=="YYYY-MM-DD":
+                    dateval=data["document"][key][k]
+                    try:
+                        final_date=parser.parse(str(dateval),fuzzy=False) #this converts string to datetime 
+                        data["document"][key][k]=final_date.strftime("%Y-%m-%d") #this converts datetime to string in desired format
+                    except(ValueError, TypeError):
+                        data["document"][key][k]=None
 
         
     return data
