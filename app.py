@@ -2,8 +2,8 @@ from flask import Flask, jsonify,request
 import re
 from dateutil import parser
 app=Flask(__name__)
-@app.route('/extract',methods=["POST"])
-def extract():
+@app.route('/preprocess',methods=["POST"])
+def validation():
     try:
         data=request.get_json()
         if data is None:
@@ -79,9 +79,18 @@ def pre_process(data):
                         data["document"][key][k]=final_date.strftime("%Y-%m-%d") #this converts datetime to string in desired format
                     except(ValueError, TypeError):
                         data["document"][key][k]=None
-
-        
     return data
+
+@app.route('/extract',methods=["POST"])
+def extract():
+    data=request.get_json()
+    ans={}
+    for i in data["required_fields"]:
+        if i in data["document"].keys():
+            ans[i]=data["document"].get(i)
+        else:
+            ans[i]=None
+    return ans
 
 if __name__=="__main__":
     app.run(debug=True)
